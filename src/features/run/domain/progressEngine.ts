@@ -5,7 +5,7 @@ export type ProgressTarget = {
 
 export const computeProgress = (
   target: ProgressTarget,
-  metrics: { distanceMeters: number; durationSec: number }
+  metrics: { distanceMeters: number; durationSec: number },
 ) => {
   const distanceRatio = target.distanceMeters ? metrics.distanceMeters / target.distanceMeters : 0;
   const durationRatio = target.durationSec ? metrics.durationSec / target.durationSec : 0;

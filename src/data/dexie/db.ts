@@ -5,5 +5,5 @@ export type DexieDbConfig = {
 
 export const dexieDbConfig: DexieDbConfig = {
   name: 'movilesFinal',
-  version: 1
+  version: 1,
 };

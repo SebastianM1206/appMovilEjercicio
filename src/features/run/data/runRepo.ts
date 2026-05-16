@@ -19,6 +19,6 @@ export const createInMemoryRunRepo = (): RunRepo => {
     },
     async listRuns() {
       return [...runs];
-    }
+    },
   };
 };

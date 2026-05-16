@@ -7,6 +7,6 @@ export const createNetworkMonitor = () => {
     getStatus: () => status,
     setStatus: (next: NetworkStatus) => {
       status = next;
-    }
+    },
   };
 };

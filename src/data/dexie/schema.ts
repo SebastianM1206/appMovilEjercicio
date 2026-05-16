@@ -1,3 +1,3 @@
 export const schemaV1 = {
-  runs: 'id, startedAt, distanceMeters, durationSec'
+  runs: 'id, startedAt, distanceMeters, durationSec',
 };

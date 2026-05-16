@@ -10,7 +10,7 @@ export const leaderboardService = {
     return Array.from({ length: size }, (_, index) => ({
       userId: `user-${index + 1}`,
       displayName: `Corredor ${index + 1}`,
-      score: 0
+      score: 0,
     }));
-  }
+  },
 };

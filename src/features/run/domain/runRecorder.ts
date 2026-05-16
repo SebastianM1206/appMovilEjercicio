@@ -17,6 +17,6 @@ export const createRunRecorder = () => {
     },
     reset() {
       samples.length = 0;
-    }
+    },
   };
 };

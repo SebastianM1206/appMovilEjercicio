@@ -8,6 +8,6 @@ export type MapAdapter = {
 export const createMapAdapter = (provider: MapProvider): MapAdapter => {
   return {
     provider,
-    setCenter: (_lat: number, _lon: number) => undefined
+    setCenter: () => undefined,
   };
 };
