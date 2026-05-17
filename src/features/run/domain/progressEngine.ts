@@ -3,6 +3,14 @@ export type ProgressTarget = {
   durationSec?: number;
 };
 
+export type MilestoneEvent = {
+  type: 'MILESTONE';
+  payload: {
+    km: number;
+    timestamp: number;
+  };
+};
+
 export const computeProgress = (
   target: ProgressTarget,
   metrics: { distanceMeters: number; durationSec: number },
@@ -16,4 +24,21 @@ export const computeProgress = (
   }
 
   return Math.min(1, Math.max(0, value));
+};
+
+export const checkMilestones = (currentDistance: number, lastMilestoneKm: number) => {
+  const currentKm = Math.floor(currentDistance / 1000);
+  if (currentKm > lastMilestoneKm) {
+    return {
+      event: {
+        type: 'MILESTONE' as const,
+        payload: {
+          km: currentKm,
+          timestamp: Date.now(),
+        },
+      },
+      nextMilestoneKm: currentKm,
+    };
+  }
+  return { event: null, nextMilestoneKm: lastMilestoneKm };
 };

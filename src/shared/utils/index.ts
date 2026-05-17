@@ -2,6 +2,21 @@ export const clamp = (value: number, min: number, max: number) => {
   return Math.min(max, Math.max(min, value));
 };
 
+export const getErrorMessage = (
+  error: unknown,
+  fallback = 'Ocurrio un error inesperado.',
+): string => {
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return error.message;
+  }
+
+  if (typeof error === 'string' && error.trim().length > 0) {
+    return error;
+  }
+
+  return fallback;
+};
+
 export const getIsoWeekPeriodKey = (timestamp: number): string => {
   const date = new Date(timestamp);
   const day = date.getUTCDay() || 7;
