@@ -1,5 +1,10 @@
-export type AuthState = 'idle' | 'checking' | 'signedOut' | 'signedIn';
+import { useContext } from 'react';
+import { AuthContextInstance } from '../authContext';
 
 export const useAuth = () => {
-  return { state: 'idle' as AuthState };
+  const context = useContext(AuthContextInstance);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };

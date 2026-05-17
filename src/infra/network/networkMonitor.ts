@@ -1,12 +1,39 @@
+import { Network } from '@capacitor/network';
+
 export type NetworkStatus = 'online' | 'offline';
 
+export type NetworkChangeHandler = (status: NetworkStatus) => void;
+
 export const createNetworkMonitor = () => {
-  let status: NetworkStatus = 'online';
+  let currentStatus: NetworkStatus = 'online';
+
+  const setStatus = (status: NetworkStatus) => {
+    currentStatus = status;
+  };
+
+  const getStatus = async (): Promise<NetworkStatus> => {
+    const status = await Network.getStatus();
+    currentStatus = status.connected ? 'online' : 'offline';
+    return currentStatus;
+  };
+
+  const listen = (handler: NetworkChangeHandler) => {
+    const listener = Network.addListener('networkStatusChange', (status) => {
+      const next = status.connected ? 'online' : 'offline';
+      setStatus(next);
+      handler(next);
+    });
+
+    return () => {
+      void listener.remove();
+    };
+  };
 
   return {
-    getStatus: () => status,
-    setStatus: (next: NetworkStatus) => {
-      status = next;
-    }
+    getStatus,
+    setStatus,
+    listen,
   };
 };
+
+export const networkMonitor = createNetworkMonitor();

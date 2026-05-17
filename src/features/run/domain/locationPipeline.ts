@@ -12,6 +12,6 @@ export const normalizeLocation = (location: RawLocation): RunSample => {
     ts: location.ts,
     lat: location.lat,
     lon: location.lon,
-    speed: Math.max(0, location.speed)
+    speed: Math.max(0, location.speed),
   };
 };
