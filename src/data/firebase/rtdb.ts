@@ -5,6 +5,9 @@ import {
   set,
   update,
   runTransaction,
+  query,
+  orderByChild,
+  limitToLast,
   type TransactionResult,
 } from 'firebase/database';
 import { getFirebaseApp } from './app';
@@ -28,5 +31,14 @@ export const rtdb = {
     updater: (currentValue: T | null) => T | null,
   ): Promise<TransactionResult> => {
     return runTransaction(ref(rtdb.getClient(), path), updater);
+  },
+  query: async <T>(
+    path: string,
+    orderByField: string,
+    limit: number,
+  ): Promise<Record<string, T>> => {
+    const dbRef = ref(rtdb.getClient(), path);
+    const snapshot = await get(query(dbRef, orderByChild(orderByField), limitToLast(limit)));
+    return (snapshot.val() as Record<string, T>) ?? {};
   },
 };
