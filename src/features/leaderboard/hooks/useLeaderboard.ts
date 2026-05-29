@@ -6,6 +6,7 @@ import { leaderboardService } from '../leaderboardService';
 export type LeaderboardRow = {
   id: string;
   displayName: string;
+  avatarUrl: string | null;
   distanceM: number;
   runCount: number;
 };
@@ -47,6 +48,7 @@ export const useLeaderboard = (periodKey?: string, limit = 50): LeaderboardState
           top.map((entry) => ({
             id: entry.userId,
             displayName: entry.displayName,
+            avatarUrl: entry.avatarUrl,
             distanceM: entry.distanceM,
             runCount: entry.runCount,
           })),
@@ -56,6 +58,7 @@ export const useLeaderboard = (periodKey?: string, limit = 50): LeaderboardState
             ? {
                 id: mine.userId,
                 displayName: mine.displayName,
+                avatarUrl: mine.avatarUrl,
                 distanceM: mine.distanceM,
                 runCount: mine.runCount,
               }

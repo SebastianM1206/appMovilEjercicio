@@ -26,6 +26,7 @@ export interface RunRepo {
   addEvent(event: RunEvent): Promise<void>;
   enqueueOutbox(op: OutboxInput): Promise<OutboxOp>;
   listPendingOutbox(now: number): Promise<OutboxOp[]>;
+  countOutbox(): Promise<number>;
   markOutboxDone(opId: string): Promise<void>;
   markOutboxFailed(opId: string, error: string, nextRetryAt: number): Promise<void>;
 }
@@ -69,6 +70,9 @@ export const createInMemoryRunRepo = (): RunRepo => {
     },
     async listPendingOutbox() {
       return [];
+    },
+    async countOutbox() {
+      return 0;
     },
     async markOutboxDone() {
       return;

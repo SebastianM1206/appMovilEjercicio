@@ -5,32 +5,46 @@ import type { AggEntry, UserPublic } from '../../data/firebase/types';
 export type LeaderboardEntry = {
   userId: string;
   displayName: string;
+  avatarUrl: string | null;
   distanceM: number;
   runCount: number;
   score: number;
 };
 
-const displayNameCache = new Map<string, string>();
+type PublicProfileCacheValue = {
+  displayName: string;
+  avatarUrl: string | null;
+};
 
-const fetchDisplayName = async (uid: string): Promise<string> => {
-  const cached = displayNameCache.get(uid);
+const profileCache = new Map<string, PublicProfileCacheValue>();
+
+const fetchPublicProfile = async (uid: string): Promise<PublicProfileCacheValue> => {
+  const cached = profileCache.get(uid);
   if (cached) {
     return cached;
   }
 
   const profile = await rtdb.read<UserPublic>(firebasePaths.userPublic(uid));
-  const displayName = profile?.displayName ?? 'Usuario';
-  displayNameCache.set(uid, displayName);
-  return displayName;
+  const value: PublicProfileCacheValue = {
+    displayName: profile?.displayName ?? 'Usuario',
+    avatarUrl: profile?.avatarUrl ?? null,
+  };
+  profileCache.set(uid, value);
+  return value;
 };
 
-const mapAggToEntry = async (userId: string, agg: AggEntry): Promise<LeaderboardEntry> => ({
-  userId,
-  displayName: await fetchDisplayName(userId),
-  distanceM: agg.distanceM ?? 0,
-  runCount: agg.runCount ?? 0,
-  score: agg.score ?? agg.distanceM ?? 0,
-});
+const mapAggToEntry = async (userId: string, agg: AggEntry): Promise<LeaderboardEntry> => {
+  const publicProfile = await fetchPublicProfile(userId);
+
+  return {
+    userId,
+    displayName: publicProfile.displayName,
+    avatarUrl: publicProfile.avatarUrl,
+    distanceM: agg.distanceM ?? 0,
+    runCount: agg.runCount ?? 0,
+    score: agg.score ?? agg.distanceM ?? 0,
+  };
+};
 
 export const leaderboardService = {
   async getTop(periodKey: string, limit: number): Promise<LeaderboardEntry[]> {
@@ -75,6 +89,6 @@ export const leaderboardService = {
   },
 
   clearDisplayNameCache(): void {
-    displayNameCache.clear();
+    profileCache.clear();
   },
 };

@@ -95,6 +95,9 @@ export const createRunRepoDexie = (): RunRepo => {
     async listPendingOutbox(referenceTime: number): Promise<OutboxOp[]> {
       return appDb.outbox.where('nextRetryAt').belowOrEqual(referenceTime).sortBy('createdAt');
     },
+    async countOutbox(): Promise<number> {
+      return appDb.outbox.count();
+    },
     async markOutboxDone(opId: string): Promise<void> {
       await appDb.outbox.where('opId').equals(opId).delete();
     },

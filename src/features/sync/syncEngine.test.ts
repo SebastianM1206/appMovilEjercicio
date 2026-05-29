@@ -78,6 +78,7 @@ const createMockRunRepo = (): RunRepo => ({
   addEvent: vi.fn(),
   enqueueOutbox: vi.fn(),
   listPendingOutbox: vi.fn(),
+  countOutbox: vi.fn(),
   markOutboxDone: vi.fn(),
   markOutboxFailed: vi.fn(),
 });

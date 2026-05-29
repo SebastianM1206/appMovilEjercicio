@@ -1,6 +1,6 @@
-import { useEffect, type FC, type ReactNode } from 'react';
+import { useEffect, useMemo, type FC, type ReactNode } from 'react';
 import { AuthProvider } from '../features/auth/authContext';
-import { createSyncService } from '../features/sync/syncService';
+import { SyncProvider } from '../features/sync/syncContext';
 import { createRunRepoDexie } from '../data/dexie/repos/runRepoDexie';
 
 type AppProvidersProps = {
@@ -8,14 +8,13 @@ type AppProvidersProps = {
 };
 
 const AppProviders: FC<AppProvidersProps> = ({ children }) => {
-  useEffect(() => {
-    const runRepo = createRunRepoDexie();
-    const syncService = createSyncService({ runRepo });
-    void syncService.start();
-    return () => syncService.stop();
-  }, []);
+  const runRepo = useMemo(() => createRunRepoDexie(), []);
 
-  return <AuthProvider>{children}</AuthProvider>;
+  return (
+    <AuthProvider>
+      <SyncProvider runRepo={runRepo}>{children}</SyncProvider>
+    </AuthProvider>
+  );
 };
 
 export default AppProviders;

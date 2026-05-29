@@ -31,4 +31,26 @@ export const userPublicRepo = {
     }
     await userPublicRepo.createPublicProfile(uid, displayName);
   },
+
+  async updatePublicProfile(
+    uid: string,
+    updates: Partial<Pick<UserPublic, 'displayName' | 'avatarUrl' | 'country'>>,
+  ): Promise<void> {
+    const existing = await userPublicRepo.read(uid);
+    if (!existing) {
+      throw new Error('PUBLIC_PROFILE_NOT_FOUND');
+    }
+
+    const merged: UserPublic = {
+      ...existing,
+      ...updates,
+      updatedAt: now(),
+    };
+
+    if (typeof merged.displayName === 'string') {
+      merged.displayName = merged.displayName.trim();
+    }
+
+    await rtdb.write(firebasePaths.userPublic(uid), merged);
+  },
 };

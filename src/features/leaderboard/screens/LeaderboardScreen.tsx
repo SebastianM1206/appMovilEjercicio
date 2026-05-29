@@ -1,4 +1,5 @@
 import {
+  IonAvatar,
   IonCard,
   IonCardContent,
   IonCardHeader,
@@ -51,9 +52,14 @@ const LeaderboardScreen = () => {
             {!isLoading &&
               !error &&
               rows.map((row, index) => (
-                <div key={row.id} className="py-2">
-                  {index + 1}. {row.displayName} — {formatDistanceKm(row.distanceM)} km (
-                  {row.runCount} {row.runCount === 1 ? 'carrera' : 'carreras'})
+                <div key={row.id} className="flex items-center gap-3 py-2">
+                  <IonAvatar>
+                    {row.avatarUrl ? <img src={row.avatarUrl} alt={`Avatar de ${row.displayName}`} /> : null}
+                  </IonAvatar>
+                  <div>
+                    {index + 1}. {row.displayName} — {formatDistanceKm(row.distanceM)} km ({row.runCount}{' '}
+                    {row.runCount === 1 ? 'carrera' : 'carreras'})
+                  </div>
                 </div>
               ))}
           </IonCardContent>
@@ -66,9 +72,16 @@ const LeaderboardScreen = () => {
           <IonCardContent>
             {isLoading && <div>Cargando tu resumen...</div>}
             {!isLoading && myEntry && (
-              <div>
-                {myEntry.displayName} — {formatDistanceKm(myEntry.distanceM)} km ({myEntry.runCount}{' '}
-                {myEntry.runCount === 1 ? 'carrera' : 'carreras'})
+              <div className="flex items-center gap-3">
+                <IonAvatar>
+                  {myEntry.avatarUrl ? (
+                    <img src={myEntry.avatarUrl} alt={`Avatar de ${myEntry.displayName}`} />
+                  ) : null}
+                </IonAvatar>
+                <div>
+                  {myEntry.displayName} — {formatDistanceKm(myEntry.distanceM)} km ({myEntry.runCount}{' '}
+                  {myEntry.runCount === 1 ? 'carrera' : 'carreras'})
+                </div>
               </div>
             )}
             {!isLoading && !myEntry && !error && (
