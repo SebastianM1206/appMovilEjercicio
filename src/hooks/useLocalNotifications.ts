@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import type { PluginListenerHandle } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { getErrorMessage } from '../shared/utils';
 
@@ -93,7 +94,7 @@ export const useLocalNotifications = () => {
   );
 
   useEffect(() => {
-    let receivedListener: PluginListenerHnadle | undefined;
+    let receivedListener: PluginListenerHandle | undefined;
 
     const setupListener = async () => {
       receivedListener = await LocalNotifications.addListener(

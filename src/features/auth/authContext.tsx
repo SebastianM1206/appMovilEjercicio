@@ -8,6 +8,7 @@ export type AuthContextValue = {
   user: AuthUser | null;
   isAuthenticated: boolean;
   signInWithEmail: (email: string, password: string) => Promise<AuthUser>;
+  signUpWithEmail: (email: string, password: string, displayName: string) => Promise<AuthUser>;
   signOut: () => Promise<void>;
 };
 
@@ -36,6 +37,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       user,
       isAuthenticated: state === 'signedIn',
       signInWithEmail: authService.signInWithEmail,
+      signUpWithEmail: authService.signUpWithEmail,
       signOut: authService.signOut,
     }),
     [state, user],

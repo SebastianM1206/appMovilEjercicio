@@ -18,14 +18,18 @@ export const createNetworkMonitor = () => {
   };
 
   const listen = (handler: NetworkChangeHandler) => {
-    const listener = Network.addListener('networkStatusChange', (status) => {
-      const next = status.connected ? 'online' : 'offline';
-      setStatus(next);
-      handler(next);
-    });
+    let listenerHandle: { remove: () => Promise<void> } | null = null;
+
+    void (async () => {
+      listenerHandle = await Network.addListener('networkStatusChange', (status) => {
+        const next = status.connected ? 'online' : 'offline';
+        setStatus(next);
+        handler(next);
+      });
+    })();
 
     return () => {
-      void listener.remove();
+      void listenerHandle?.remove();
     };
   };
 
