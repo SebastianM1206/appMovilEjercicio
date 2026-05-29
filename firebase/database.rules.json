@@ -13,21 +13,30 @@
     },
     "runs": {
       "$uid": {
-        ".read": "auth != null && auth.uid == $uid",
-        ".write": "auth != null && auth.uid == $uid"
+        "$runId": {
+          "summary": {
+            ".read": "auth != null && auth.uid == $uid",
+            ".write": "auth != null && auth.uid == $uid",
+            ".validate": "newData.hasChildren(['startedAt', 'endedAt', 'durationS', 'distanceM', 'avgPaceSPerKm', 'calories', 'routePath', 'photoCount', 'integrityFlags', 'appVersion', 'deviceModel']) && newData.child('startedAt').isNumber() && newData.child('startedAt').val() > 0 && newData.child('durationS').isNumber() && newData.child('durationS').val() > 0 && newData.child('durationS').val() <= 86400 && newData.child('distanceM').isNumber() && newData.child('distanceM').val() >= 50 && newData.child('distanceM').val() <= 100000 && newData.child('photoCount').isNumber() && newData.child('photoCount').val() >= 0 && newData.child('integrityFlags').hasChildren() && newData.child('appVersion').isString() && newData.child('deviceModel').isString() && newData.child('routePath').isString()"
+          }
+        }
       }
     },
     "counted": {
       "$uid": {
-        ".read": "auth != null && auth.uid == $uid",
-        ".write": "auth != null && auth.uid == $uid"
+        "$runId": {
+          ".read": "auth != null && auth.uid == $uid",
+          ".write": "auth != null && auth.uid == $uid && !data.exists() && newData.val() === true"
+        }
       }
     },
     "agg": {
       "$periodKey": {
         ".read": true,
+        ".indexOn": ["distanceM", "score"],
         "$uid": {
-          ".write": "auth != null && auth.uid == $uid"
+          ".write": "auth != null && auth.uid == $uid",
+          ".validate": "newData.hasChildren(['distanceM', 'runCount', 'score', 'updatedAt', 'lastRunId']) && newData.child('distanceM').isNumber() && newData.child('distanceM').val() >= 0 && newData.child('runCount').isNumber() && newData.child('runCount').val() >= 0 && newData.child('score').isNumber() && newData.child('score').val() >= 0 && newData.child('score').val() == newData.child('distanceM').val() && newData.child('updatedAt').isNumber() && newData.child('lastRunId').isString()"
         }
       }
     }

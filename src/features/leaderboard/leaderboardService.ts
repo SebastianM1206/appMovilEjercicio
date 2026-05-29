@@ -1,28 +1,36 @@
-import { rtdb } from '../../data/firebase/rtdb';
 import { firebasePaths } from '../../data/firebase/paths';
+import { rtdb } from '../../data/firebase/rtdb';
+import type { AggEntry, UserPublic } from '../../data/firebase/types';
 
 export type LeaderboardEntry = {
   userId: string;
   displayName: string;
   distanceM: number;
   runCount: number;
+  score: number;
 };
 
-export type UserPublicProfile = {
-  displayName?: string;
-};
-
-export type AggEntry = {
-  distanceM?: number;
-  runCount?: number;
-  updatedAt?: number;
-  lastRunId?: string;
-};
+const displayNameCache = new Map<string, string>();
 
 const fetchDisplayName = async (uid: string): Promise<string> => {
-  const profile = await rtdb.read<UserPublicProfile>(firebasePaths.userPublic(uid));
-  return profile?.displayName ?? 'Usuario';
+  const cached = displayNameCache.get(uid);
+  if (cached) {
+    return cached;
+  }
+
+  const profile = await rtdb.read<UserPublic>(firebasePaths.userPublic(uid));
+  const displayName = profile?.displayName ?? 'Usuario';
+  displayNameCache.set(uid, displayName);
+  return displayName;
 };
+
+const mapAggToEntry = async (userId: string, agg: AggEntry): Promise<LeaderboardEntry> => ({
+  userId,
+  displayName: await fetchDisplayName(userId),
+  distanceM: agg.distanceM ?? 0,
+  runCount: agg.runCount ?? 0,
+  score: agg.score ?? agg.distanceM ?? 0,
+});
 
 export const leaderboardService = {
   async getTop(periodKey: string, limit: number): Promise<LeaderboardEntry[]> {
@@ -31,37 +39,42 @@ export const leaderboardService = {
       return [];
     }
 
-    const path = firebasePaths.agg(periodKey, '');
-    const aggMap = await rtdb.query<AggEntry>(path, 'distanceM', size);
+    const path = firebasePaths.aggPeriod(periodKey);
+    const aggMap = await rtdb.query<AggEntry>(path, 'score', size);
+
     const entries = Object.entries(aggMap ?? {})
       .map(([userId, agg]) => ({
         userId,
         distanceM: agg.distanceM ?? 0,
         runCount: agg.runCount ?? 0,
+        score: agg.score ?? agg.distanceM ?? 0,
       }))
-      .sort((a, b) => b.distanceM - a.distanceM)
+      .sort((a, b) => b.score - a.score)
       .slice(0, size);
 
-    const resolved = await Promise.all(
-      entries.map(async (entry) => ({
-        ...entry,
-        displayName: await fetchDisplayName(entry.userId),
-      })),
+    return Promise.all(
+      entries.map((entry) =>
+        mapAggToEntry(entry.userId, {
+          distanceM: entry.distanceM,
+          runCount: entry.runCount,
+          score: entry.score,
+          updatedAt: 0,
+          lastRunId: '',
+        }),
+      ),
     );
-
-    return resolved;
   },
+
   async getMyAgg(periodKey: string, uid: string): Promise<LeaderboardEntry | null> {
     const agg = await rtdb.read<AggEntry>(firebasePaths.agg(periodKey, uid));
     if (!agg) {
       return null;
     }
 
-    return {
-      userId: uid,
-      displayName: await fetchDisplayName(uid),
-      distanceM: agg.distanceM ?? 0,
-      runCount: agg.runCount ?? 0,
-    };
+    return mapAggToEntry(uid, agg);
+  },
+
+  clearDisplayNameCache(): void {
+    displayNameCache.clear();
   },
 };

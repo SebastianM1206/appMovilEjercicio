@@ -61,3 +61,23 @@ vi.mock('@capacitor/network', () => ({
     addListener: vi.fn(async () => ({ remove: vi.fn() })),
   },
 }));
+
+vi.mock('@capacitor/app', () => ({
+  App: {
+    getInfo: vi.fn(async () => ({ version: '0.0.1', build: '0', name: 'movilesFinal', id: '' })),
+  },
+}));
+
+vi.mock('@capacitor/device', () => ({
+  Device: {
+    getInfo: vi.fn(async () => ({
+      model: 'test-device',
+      platform: 'web',
+      operatingSystem: 'unknown',
+      osVersion: 'unknown',
+      manufacturer: 'unknown',
+      isVirtual: false,
+      webViewVersion: 'unknown',
+    })),
+  },
+}));
