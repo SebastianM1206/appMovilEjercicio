@@ -1,0 +1,800 @@
+{
+  "info": {
+    "name": "AppMovil Firebase Integration",
+    "_postman_id": "f4d9de2c-9b6b-4e05-bd1f-dcb01e7a0ec6",
+    "description": "Collection para validar integracion Firebase del proyecto AppMovilEjercicio: Auth (REST), RTDB (rules y datos), y escenarios M6/M7.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.collectionVariables.get('runId')) {",
+          "  pm.collectionVariables.set('runId', pm.variables.replaceIn('{{$guid}}'));",
+          "}",
+          "if (!pm.collectionVariables.get('photoId')) {",
+          "  pm.collectionVariables.set('photoId', pm.variables.replaceIn('{{$guid}}'));",
+          "}",
+          "if (!pm.collectionVariables.get('periodKey')) {",
+          "  pm.collectionVariables.set('periodKey', '2026-22');",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "00 - Setup",
+      "item": [
+        {
+          "name": "Set runId and photoId",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "https://postman-echo.com/get?runId={{runId}}&photoId={{photoId}}",
+              "protocol": "https",
+              "host": [
+                "postman-echo",
+                "com"
+              ],
+              "path": [
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "runId",
+                  "value": "{{runId}}"
+                },
+                {
+                  "key": "photoId",
+                  "value": "{{photoId}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Variables listas', function () {",
+                  "  pm.expect(pm.collectionVariables.get('runId')).to.be.a('string');",
+                  "  pm.expect(pm.collectionVariables.get('photoId')).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01 - Auth User A",
+      "item": [
+        {
+          "name": "Sign up User A (opcional)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{emailA}}\",\n  \"password\": \"{{passwordA}}\",\n  \"returnSecureToken\": true\n}"
+            },
+            "url": {
+              "raw": "https://identitytoolkit.googleapis.com/v1/accounts:signUp?key={{firebaseApiKey}}",
+              "protocol": "https",
+              "host": [
+                "identitytoolkit",
+                "googleapis",
+                "com"
+              ],
+              "path": [
+                "v1",
+                "accounts:signUp"
+              ],
+              "query": [
+                {
+                  "key": "key",
+                  "value": "{{firebaseApiKey}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  pm.collectionVariables.set('idTokenA', data.idToken);",
+                  "  pm.collectionVariables.set('uidA', data.localId);",
+                  "}",
+                  "pm.test('Sign up A: 200 o EMAIL_EXISTS', function () {",
+                  "  pm.expect([200, 400]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sign in User A",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{emailA}}\",\n  \"password\": \"{{passwordA}}\",\n  \"returnSecureToken\": true\n}"
+            },
+            "url": {
+              "raw": "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={{firebaseApiKey}}",
+              "protocol": "https",
+              "host": [
+                "identitytoolkit",
+                "googleapis",
+                "com"
+              ],
+              "path": [
+                "v1",
+                "accounts:signInWithPassword"
+              ],
+              "query": [
+                {
+                  "key": "key",
+                  "value": "{{firebaseApiKey}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Sign in A OK', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "const data = pm.response.json();",
+                  "pm.collectionVariables.set('idTokenA', data.idToken);",
+                  "pm.collectionVariables.set('uidA', data.localId);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 - Auth User B",
+      "item": [
+        {
+          "name": "Sign up User B (opcional)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{emailB}}\",\n  \"password\": \"{{passwordB}}\",\n  \"returnSecureToken\": true\n}"
+            },
+            "url": {
+              "raw": "https://identitytoolkit.googleapis.com/v1/accounts:signUp?key={{firebaseApiKey}}",
+              "protocol": "https",
+              "host": [
+                "identitytoolkit",
+                "googleapis",
+                "com"
+              ],
+              "path": [
+                "v1",
+                "accounts:signUp"
+              ],
+              "query": [
+                {
+                  "key": "key",
+                  "value": "{{firebaseApiKey}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  pm.collectionVariables.set('idTokenB', data.idToken);",
+                  "  pm.collectionVariables.set('uidB', data.localId);",
+                  "}",
+                  "pm.test('Sign up B: 200 o EMAIL_EXISTS', function () {",
+                  "  pm.expect([200, 400]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sign in User B",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{emailB}}\",\n  \"password\": \"{{passwordB}}\",\n  \"returnSecureToken\": true\n}"
+            },
+            "url": {
+              "raw": "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={{firebaseApiKey}}",
+              "protocol": "https",
+              "host": [
+                "identitytoolkit",
+                "googleapis",
+                "com"
+              ],
+              "path": [
+                "v1",
+                "accounts:signInWithPassword"
+              ],
+              "query": [
+                {
+                  "key": "key",
+                  "value": "{{firebaseApiKey}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Sign in B OK', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "const data = pm.response.json();",
+                  "pm.collectionVariables.set('idTokenB', data.idToken);",
+                  "pm.collectionVariables.set('uidB', data.localId);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 - RTDB Profile",
+      "item": [
+        {
+          "name": "Create/Update public profile A",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"displayName\": \"{{displayNameA}}\",\n  \"avatarUrl\": null,\n  \"country\": \"MX\",\n  \"createdAt\": 1716892800000,\n  \"updatedAt\": 1716892800000\n}"
+            },
+            "url": {
+              "raw": "{{databaseUrl}}/users/{{uidA}}/public.json?auth={{idTokenA}}",
+              "host": [
+                "{{databaseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{uidA}}",
+                "public.json"
+              ],
+              "query": [
+                {
+                  "key": "auth",
+                  "value": "{{idTokenA}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.response.to.have.status(200);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A cannot write B profile (DENIED)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"displayName\": \"Hack\",\n  \"avatarUrl\": null,\n  \"country\": \"MX\",\n  \"createdAt\": 1716892800000,\n  \"updatedAt\": 1716892800000\n}"
+            },
+            "url": {
+              "raw": "{{databaseUrl}}/users/{{uidB}}/public.json?auth={{idTokenA}}",
+              "host": [
+                "{{databaseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{uidB}}",
+                "public.json"
+              ],
+              "query": [
+                {
+                  "key": "auth",
+                  "value": "{{idTokenA}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - RTDB Rules M6",
+      "item": [
+        {
+          "name": "A writes own run summary (ALLOWED)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startedAt\": 1716892800000,\n  \"endedAt\": 1716896400000,\n  \"durationS\": 3600,\n  \"distanceM\": 10250,\n  \"avgPaceSPerKm\": 351,\n  \"calories\": 620,\n  \"routePath\": \"routes/{{uidA}}/{{runId}}.json.gz\",\n  \"photoCount\": 0,\n  \"integrityFlags\": [\"OK\"],\n  \"appVersion\": \"1.0.0\",\n  \"deviceModel\": \"Postman\"\n}"
+            },
+            "url": {
+              "raw": "{{databaseUrl}}/runs/{{uidA}}/{{runId}}/summary.json?auth={{idTokenA}}",
+              "host": [
+                "{{databaseUrl}}"
+              ],
+              "path": [
+                "runs",
+                "{{uidA}}",
+                "{{runId}}",
+                "summary.json"
+              ],
+              "query": [
+                {
+                  "key": "auth",
+                  "value": "{{idTokenA}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "A writes B run summary (DENIED)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startedAt\": 1716892800000,\n  \"endedAt\": 1716896400000,\n  \"durationS\": 3600,\n  \"distanceM\": 10250,\n  \"avgPaceSPerKm\": 351,\n  \"calories\": 620,\n  \"routePath\": \"routes/{{uidB}}/{{runId}}.json.gz\",\n  \"photoCount\": 0,\n  \"integrityFlags\": [\"OK\"],\n  \"appVersion\": \"1.0.0\",\n  \"deviceModel\": \"Postman\"\n}"
+            },
+            "url": {
+              "raw": "{{databaseUrl}}/runs/{{uidB}}/{{runId}}/summary.json?auth={{idTokenA}}",
+              "host": [
+                "{{databaseUrl}}"
+              ],
+              "path": [
+                "runs",
+                "{{uidB}}",
+                "{{runId}}",
+                "summary.json"
+              ],
+              "query": [
+                {
+                  "key": "auth",
+                  "value": "{{idTokenA}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "counted write-once first write (ALLOWED)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "true"
+            },
+            "url": {
+              "raw": "{{databaseUrl}}/counted/{{uidA}}/{{runId}}.json?auth={{idTokenA}}",
+              "host": [
+                "{{databaseUrl}}"
+              ],
+              "path": [
+                "counted",
+                "{{uidA}}",
+                "{{runId}}.json"
+              ],
+              "query": [
+                {
+                  "key": "auth",
+                  "value": "{{idTokenA}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "counted write-once second write (DENIED)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "true"
+            },
+            "url": {
+              "raw": "{{databaseUrl}}/counted/{{uidA}}/{{runId}}.json?auth={{idTokenA}}",
+              "host": [
+                "{{databaseUrl}}"
+              ],
+              "path": [
+                "counted",
+                "{{uidA}}",
+                "{{runId}}.json"
+              ],
+              "query": [
+                {
+                  "key": "auth",
+                  "value": "{{idTokenA}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "agg invalid score != distanceM (DENIED)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"distanceM\": 200,\n  \"runCount\": 1,\n  \"score\": 100,\n  \"updatedAt\": 1716896400000,\n  \"lastRunId\": \"{{runId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{databaseUrl}}/agg/{{periodKey}}/{{uidA}}.json?auth={{idTokenA}}",
+              "host": [
+                "{{databaseUrl}}"
+              ],
+              "path": [
+                "agg",
+                "{{periodKey}}",
+                "{{uidA}}.json"
+              ],
+              "query": [
+                {
+                  "key": "auth",
+                  "value": "{{idTokenA}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "agg valid score == distanceM (ALLOWED)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"distanceM\": 200,\n  \"runCount\": 1,\n  \"score\": 200,\n  \"updatedAt\": 1716896400000,\n  \"lastRunId\": \"{{runId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{databaseUrl}}/agg/{{periodKey}}/{{uidA}}.json?auth={{idTokenA}}",
+              "host": [
+                "{{databaseUrl}}"
+              ],
+              "path": [
+                "agg",
+                "{{periodKey}}",
+                "{{uidA}}.json"
+              ],
+              "query": [
+                {
+                  "key": "auth",
+                  "value": "{{idTokenA}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - RTDB M7 side effects",
+      "item": [
+        {
+          "name": "Read run summary photoCount",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{databaseUrl}}/runs/{{uidA}}/{{runId}}/summary/photoCount.json?auth={{idTokenA}}",
+              "host": [
+                "{{databaseUrl}}"
+              ],
+              "path": [
+                "runs",
+                "{{uidA}}",
+                "{{runId}}",
+                "summary",
+                "photoCount.json"
+              ],
+              "query": [
+                {
+                  "key": "auth",
+                  "value": "{{idTokenA}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Read avatarUrl",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{databaseUrl}}/users/{{uidA}}/public/avatarUrl.json?auth={{idTokenA}}",
+              "host": [
+                "{{databaseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{uidA}}",
+                "public",
+                "avatarUrl.json"
+              ],
+              "query": [
+                {
+                  "key": "auth",
+                  "value": "{{idTokenA}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 - Storage M7 (manual in Postman)",
+      "item": [
+        {
+          "name": "Upload avatar file (manual binary)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idTokenA}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "image/jpeg"
+              }
+            ],
+            "body": {
+              "mode": "file",
+              "file": {
+                "src": ""
+              }
+            },
+            "url": {
+              "raw": "https://firebasestorage.googleapis.com/v0/b/{{storageBucket}}/o?uploadType=media&name=avatars/{{uidA}}.jpg",
+              "protocol": "https",
+              "host": [
+                "firebasestorage",
+                "googleapis",
+                "com"
+              ],
+              "path": [
+                "v0",
+                "b",
+                "{{storageBucket}}",
+                "o"
+              ],
+              "query": [
+                {
+                  "key": "uploadType",
+                  "value": "media"
+                },
+                {
+                  "key": "name",
+                  "value": "avatars/{{uidA}}.jpg"
+                }
+              ]
+            },
+            "description": "Selecciona un archivo local en Body > binary/file antes de enviar."
+          }
+        },
+        {
+          "name": "Upload run photo file (manual binary)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idTokenA}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "image/jpeg"
+              }
+            ],
+            "body": {
+              "mode": "file",
+              "file": {
+                "src": ""
+              }
+            },
+            "url": {
+              "raw": "https://firebasestorage.googleapis.com/v0/b/{{storageBucket}}/o?uploadType=media&name=photos/{{uidA}}/{{runId}}/{{photoId}}.jpg",
+              "protocol": "https",
+              "host": [
+                "firebasestorage",
+                "googleapis",
+                "com"
+              ],
+              "path": [
+                "v0",
+                "b",
+                "{{storageBucket}}",
+                "o"
+              ],
+              "query": [
+                {
+                  "key": "uploadType",
+                  "value": "media"
+                },
+                {
+                  "key": "name",
+                  "value": "photos/{{uidA}}/{{runId}}/{{photoId}}.jpg"
+                }
+              ]
+            },
+            "description": "Selecciona un archivo local en Body > binary/file antes de enviar."
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "firebaseApiKey",
+      "value": ""
+    },
+    {
+      "key": "databaseUrl",
+      "value": "https://YOUR_PROJECT-default-rtdb.YOUR_REGION.firebasedatabase.app"
+    },
+    {
+      "key": "storageBucket",
+      "value": "YOUR_PROJECT.appspot.com"
+    },
+    {
+      "key": "emailA",
+      "value": "runner.a@example.com"
+    },
+    {
+      "key": "passwordA",
+      "value": "SecurePass123!"
+    },
+    {
+      "key": "displayNameA",
+      "value": "Runner A"
+    },
+    {
+      "key": "emailB",
+      "value": "runner.b@example.com"
+    },
+    {
+      "key": "passwordB",
+      "value": "SecurePass123!"
+    },
+    {
+      "key": "idTokenA",
+      "value": ""
+    },
+    {
+      "key": "uidA",
+      "value": ""
+    },
+    {
+      "key": "idTokenB",
+      "value": ""
+    },
+    {
+      "key": "uidB",
+      "value": ""
+    },
+    {
+      "key": "runId",
+      "value": ""
+    },
+    {
+      "key": "photoId",
+      "value": ""
+    },
+    {
+      "key": "periodKey",
+      "value": "2026-22"
+    }
+  ]
+}
