@@ -10,6 +10,7 @@ export const firebasePaths = {
   runSummary: (uid: string, runId: string) => `runs/${uid}/${runId}/summary`,
   counted: (uid: string, runId: string) => `counted/${uid}/${runId}`,
   agg: (periodKey: string, uid: string) => `agg/${periodKey}/${uid}`,
+  aggPeriod: (periodKey: string) => `agg/${periodKey}`,
   routePath: (uid: string, runId: string) => `routes/${uid}/${runId}.json.gz`,
   photoPath: (uid: string, runId: string, photoId: string) =>
     `photos/${uid}/${runId}/${photoId}.jpg`,

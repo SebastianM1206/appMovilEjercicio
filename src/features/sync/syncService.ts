@@ -1,41 +1,61 @@
 import { createSyncEngine } from './syncEngine';
 import type { RunRepo } from '../run/data/runRepo';
-import { firebaseAuth } from '../../data/firebase/auth';
+import { authService } from '../auth/authService';
 import { createNetworkMonitor } from '../../infra/network/networkMonitor';
 
 export type SyncServiceConfig = {
   runRepo: RunRepo;
 };
 
-export const createSyncService = ({ runRepo }: SyncServiceConfig) => {
+export type SyncService = {
+  start: () => Promise<void>;
+  stop: () => void;
+  process: () => Promise<void>;
+};
+
+export const createSyncService = ({ runRepo }: SyncServiceConfig): SyncService => {
   let running = false;
+  let processing = false;
+  let processQueued = false;
   const network = createNetworkMonitor();
   let unsubscribeNetwork: (() => void) | null = null;
 
-  const process = async () => {
-    const session = firebaseAuth.currentSession();
-    if (!session) {
+  const process = async (): Promise<void> => {
+    if (processing) {
+      processQueued = true;
       return;
     }
 
-    const engine = createSyncEngine({ runRepo, uid: session.uid });
-    await engine.processOutbox();
+    processing = true;
+    try {
+      do {
+        processQueued = false;
+
+        const session = authService.currentUser();
+        if (!session) {
+          return;
+        }
+
+        const engine = createSyncEngine({ runRepo, uid: session.id });
+        await engine.processOutbox();
+      } while (processQueued);
+    } finally {
+      processing = false;
+    }
   };
 
-  const start = async () => {
+  const start = async (): Promise<void> => {
     if (running) {
       return;
     }
 
     running = true;
 
-    // Initial check
     const status = await network.getStatus();
     if (status === 'online') {
       void process();
     }
 
-    // Active listening
     unsubscribeNetwork = network.listen((nextStatus) => {
       if (nextStatus === 'online') {
         void process();
@@ -43,7 +63,7 @@ export const createSyncService = ({ runRepo }: SyncServiceConfig) => {
     });
   };
 
-  const stop = () => {
+  const stop = (): void => {
     running = false;
     if (unsubscribeNetwork) {
       unsubscribeNetwork();

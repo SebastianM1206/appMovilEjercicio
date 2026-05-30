@@ -1,4 +1,5 @@
 import {
+  IonAvatar,
   IonCard,
   IonCardContent,
   IonCardHeader,
@@ -6,6 +7,7 @@ import {
   IonContent,
   IonHeader,
   IonPage,
+  IonText,
   IonTitle,
   IonToolbar,
 } from '@ionic/react';
@@ -13,9 +15,13 @@ import { useMemo } from 'react';
 import { useLeaderboard } from '../hooks/useLeaderboard';
 import { getIsoWeekPeriodKey } from '../../../shared/utils';
 
+const formatDistanceKm = (distanceM: number): string => {
+  return (distanceM / 1000).toFixed(2);
+};
+
 const LeaderboardScreen = () => {
   const periodKey = useMemo(() => getIsoWeekPeriodKey(Date.now()), []);
-  const { rows, myEntry, isLoading } = useLeaderboard(periodKey);
+  const { rows, myEntry, isLoading, error } = useLeaderboard(periodKey);
 
   return (
     <IonPage>
@@ -30,13 +36,30 @@ const LeaderboardScreen = () => {
             <IonCardTitle>Semana {periodKey}</IonCardTitle>
           </IonCardHeader>
           <IonCardContent>
-            {isLoading && <div>Cargando ranking...</div>}
-            {!isLoading && rows.length === 0 && <div>Sin datos para esta semana.</div>}
+            {isLoading && (
+              <div role="status" aria-label="Cargando ranking">
+                Cargando ranking...
+              </div>
+            )}
+            {error && (
+              <IonText color="danger">
+                <p role="alert">{error}</p>
+              </IonText>
+            )}
+            {!isLoading && !error && rows.length === 0 && (
+              <div>Sin datos para esta semana.</div>
+            )}
             {!isLoading &&
+              !error &&
               rows.map((row, index) => (
-                <div key={row.id}>
-                  {index + 1}. {row.displayName} - {Math.round(row.distanceM)} m ({row.runCount}{' '}
-                  {row.runCount === 1 ? 'carrera' : 'carreras'})
+                <div key={row.id} className="flex items-center gap-3 py-2">
+                  <IonAvatar>
+                    {row.avatarUrl ? <img src={row.avatarUrl} alt={`Avatar de ${row.displayName}`} /> : null}
+                  </IonAvatar>
+                  <div>
+                    {index + 1}. {row.displayName} — {formatDistanceKm(row.distanceM)} km ({row.runCount}{' '}
+                    {row.runCount === 1 ? 'carrera' : 'carreras'})
+                  </div>
                 </div>
               ))}
           </IonCardContent>
@@ -44,15 +67,24 @@ const LeaderboardScreen = () => {
 
         <IonCard>
           <IonCardHeader>
-            <IonCardTitle>Tu posicion</IonCardTitle>
+            <IonCardTitle>Tu semana</IonCardTitle>
           </IonCardHeader>
           <IonCardContent>
-            {myEntry ? (
-              <div>
-                {myEntry.displayName} - {Math.round(myEntry.distanceM)} m ({myEntry.runCount}{' '}
-                {myEntry.runCount === 1 ? 'carrera' : 'carreras'})
+            {isLoading && <div>Cargando tu resumen...</div>}
+            {!isLoading && myEntry && (
+              <div className="flex items-center gap-3">
+                <IonAvatar>
+                  {myEntry.avatarUrl ? (
+                    <img src={myEntry.avatarUrl} alt={`Avatar de ${myEntry.displayName}`} />
+                  ) : null}
+                </IonAvatar>
+                <div>
+                  {myEntry.displayName} — {formatDistanceKm(myEntry.distanceM)} km ({myEntry.runCount}{' '}
+                  {myEntry.runCount === 1 ? 'carrera' : 'carreras'})
+                </div>
               </div>
-            ) : (
+            )}
+            {!isLoading && !myEntry && !error && (
               <div>Aun no tienes datos esta semana.</div>
             )}
           </IonCardContent>

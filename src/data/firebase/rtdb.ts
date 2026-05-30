@@ -28,7 +28,7 @@ export const rtdb = {
   },
   transaction: async <T>(
     path: string,
-    updater: (currentValue: T | null) => T | null,
+    updater: (currentValue: T | null) => T | null | undefined,
   ): Promise<TransactionResult> => {
     return runTransaction(ref(rtdb.getClient(), path), updater);
   },
