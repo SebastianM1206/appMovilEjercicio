@@ -46,15 +46,6 @@ vi.mock('firebase/database', () => ({
   limitToLast: vi.fn(),
 }));
 
-vi.mock('firebase/storage', () => ({
-  getStorage: vi.fn(() => ({})),
-  ref: vi.fn(),
-  uploadBytes: vi.fn(),
-  getDownloadURL: vi.fn(),
-  getMetadata: vi.fn(),
-  getBytes: vi.fn(),
-}));
-
 vi.mock('@capacitor/network', () => ({
   Network: {
     getStatus: vi.fn(async () => ({ connected: true, connectionType: 'wifi' })),

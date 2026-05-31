@@ -5,9 +5,8 @@ import { getIsoWeekPeriodKey } from '../../shared/utils';
 import { createSyncEngine } from './syncEngine';
 import { FATAL_RETRY_AT } from './syncErrors';
 
-const existsMock = vi.fn();
-const uploadMock = vi.fn();
-const serializeRouteBlobMock = vi.fn();
+const routeExistsMock = vi.fn();
+const routeWriteMock = vi.fn();
 const writeMock = vi.fn();
 const tryAcquireCountedLockMock = vi.fn();
 const incrementWeeklyAggMock = vi.fn();
@@ -21,12 +20,10 @@ vi.mock('../../data/firebase/runAggRepo', () => ({
   },
 }));
 
-vi.mock('../../data/firebase/storage', () => ({
-  GZIP_CONTENT_TYPE: 'application/gzip',
-  serializeRouteBlob: (...args: unknown[]) => serializeRouteBlobMock(...args),
-  storage: {
-    exists: (...args: unknown[]) => existsMock(...args),
-    upload: (...args: unknown[]) => uploadMock(...args),
+vi.mock('../../data/firebase/runRouteRepo', () => ({
+  runRouteRepo: {
+    exists: (...args: unknown[]) => routeExistsMock(...args),
+    write: (...args: unknown[]) => routeWriteMock(...args),
   },
 }));
 
@@ -88,14 +85,12 @@ describe('createSyncEngine', () => {
 
   beforeEach(() => {
     runRepo = createMockRunRepo();
-    existsMock.mockReset();
-    uploadMock.mockReset();
-    serializeRouteBlobMock.mockReset();
+    routeExistsMock.mockReset();
+    routeWriteMock.mockReset();
     writeMock.mockReset();
     tryAcquireCountedLockMock.mockReset();
     incrementWeeklyAggMock.mockReset();
     hasRunSummaryMock.mockReset();
-    serializeRouteBlobMock.mockResolvedValue(new Blob(['gzip'], { type: 'application/gzip' }));
     hasRunSummaryMock.mockResolvedValue(true);
     tryAcquireCountedLockMock.mockResolvedValue('locked_new');
     incrementWeeklyAggMock.mockResolvedValue({
@@ -107,11 +102,11 @@ describe('createSyncEngine', () => {
     });
   });
 
-  it('uploads gzip route when file does not exist', async () => {
+  it('writes route when it does not exist', async () => {
     const session = buildSession();
     vi.mocked(runRepo.listPendingOutbox).mockResolvedValue([buildOutboxOp('UPLOAD_ROUTE')]);
     vi.mocked(runRepo.getSession).mockResolvedValue(session);
-    existsMock.mockResolvedValue(false);
+    routeExistsMock.mockResolvedValue(false);
     vi.mocked(runRepo.getPoints).mockResolvedValue([
       { sessionId: 'run-1', ts: 1, lat: 19.43, lon: -99.13 },
       { sessionId: 'run-1', ts: 2, lat: 19.44, lon: -99.12 },
@@ -120,26 +115,25 @@ describe('createSyncEngine', () => {
     const engine = createSyncEngine({ runRepo, uid: 'user-1' });
     await engine.processOutbox();
 
-    expect(serializeRouteBlobMock).toHaveBeenCalledOnce();
-    expect(uploadMock).toHaveBeenCalledWith(
-      'routes/user-1/run-1.json.gz',
-      expect.any(Blob),
-      'application/gzip',
+    expect(routeWriteMock).toHaveBeenCalledOnce();
+    expect(routeWriteMock).toHaveBeenCalledWith(
+      'user-1',
+      'run-1',
+      expect.objectContaining({ runId: 'run-1', uid: 'user-1' }),
     );
     expect(runRepo.markOutboxDone).toHaveBeenCalledWith('op-UPLOAD_ROUTE');
   });
 
-  it('skips upload when route already exists', async () => {
+  it('skips route write when it already exists', async () => {
     const session = buildSession();
     vi.mocked(runRepo.listPendingOutbox).mockResolvedValue([buildOutboxOp('UPLOAD_ROUTE')]);
     vi.mocked(runRepo.getSession).mockResolvedValue(session);
-    existsMock.mockResolvedValue(true);
+    routeExistsMock.mockResolvedValue(true);
 
     const engine = createSyncEngine({ runRepo, uid: 'user-1' });
     await engine.processOutbox();
 
-    expect(serializeRouteBlobMock).not.toHaveBeenCalled();
-    expect(uploadMock).not.toHaveBeenCalled();
+    expect(routeWriteMock).not.toHaveBeenCalled();
     expect(runRepo.markOutboxDone).toHaveBeenCalledWith('op-UPLOAD_ROUTE');
   });
 
@@ -147,7 +141,7 @@ describe('createSyncEngine', () => {
     const session = buildSession();
     vi.mocked(runRepo.listPendingOutbox).mockResolvedValue([buildOutboxOp('UPLOAD_ROUTE')]);
     vi.mocked(runRepo.getSession).mockResolvedValue(session);
-    existsMock.mockResolvedValue(false);
+    routeExistsMock.mockResolvedValue(false);
     vi.mocked(runRepo.getPoints).mockResolvedValue([
       { sessionId: 'run-1', ts: 1, lat: 19.43, lon: -99.13 },
     ]);
@@ -185,7 +179,7 @@ describe('createSyncEngine', () => {
       distanceM: session.totals.distanceM,
       avgPaceSPerKm: session.totals.avgPaceSPerKm ?? null,
       calories: null,
-      routePath: 'routes/user-1/run-1.json.gz',
+      routePath: 'runs/user-1/run-1/route',
       photoCount: 0,
       integrityFlags: ['OK'],
       appVersion: '1.0.0',

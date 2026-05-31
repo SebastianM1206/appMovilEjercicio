@@ -634,105 +634,8 @@
       ]
     },
     {
-      "name": "06 - Storage M7 (manual in Postman)",
-      "item": [
-        {
-          "name": "Upload avatar file (manual binary)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{idTokenA}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "image/jpeg"
-              }
-            ],
-            "body": {
-              "mode": "file",
-              "file": {
-                "src": ""
-              }
-            },
-            "url": {
-              "raw": "https://firebasestorage.googleapis.com/v0/b/{{storageBucket}}/o?uploadType=media&name=avatars/{{uidA}}.jpg",
-              "protocol": "https",
-              "host": [
-                "firebasestorage",
-                "googleapis",
-                "com"
-              ],
-              "path": [
-                "v0",
-                "b",
-                "{{storageBucket}}",
-                "o"
-              ],
-              "query": [
-                {
-                  "key": "uploadType",
-                  "value": "media"
-                },
-                {
-                  "key": "name",
-                  "value": "avatars/{{uidA}}.jpg"
-                }
-              ]
-            },
-            "description": "Selecciona un archivo local en Body > binary/file antes de enviar."
-          }
-        },
-        {
-          "name": "Upload run photo file (manual binary)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{idTokenA}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "image/jpeg"
-              }
-            ],
-            "body": {
-              "mode": "file",
-              "file": {
-                "src": ""
-              }
-            },
-            "url": {
-              "raw": "https://firebasestorage.googleapis.com/v0/b/{{storageBucket}}/o?uploadType=media&name=photos/{{uidA}}/{{runId}}/{{photoId}}.jpg",
-              "protocol": "https",
-              "host": [
-                "firebasestorage",
-                "googleapis",
-                "com"
-              ],
-              "path": [
-                "v0",
-                "b",
-                "{{storageBucket}}",
-                "o"
-              ],
-              "query": [
-                {
-                  "key": "uploadType",
-                  "value": "media"
-                },
-                {
-                  "key": "name",
-                  "value": "photos/{{uidA}}/{{runId}}/{{photoId}}.jpg"
-                }
-              ]
-            },
-            "description": "Selecciona un archivo local en Body > binary/file antes de enviar."
-          }
-        }
-      ]
+      "name": "06 - Media (Cloudinary)",
+      "item": []
     }
   ],
   "variable": [
@@ -743,10 +646,6 @@
     {
       "key": "databaseUrl",
       "value": "https://YOUR_PROJECT-default-rtdb.YOUR_REGION.firebasedatabase.app"
-    },
-    {
-      "key": "storageBucket",
-      "value": "YOUR_PROJECT.appspot.com"
     },
     {
       "key": "emailA",

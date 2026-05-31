@@ -1,4 +1,5 @@
-{
+
+{ 
   "rules": {
     ".read": false,
     ".write": false,
@@ -18,6 +19,18 @@
             ".read": "auth != null && auth.uid == $uid",
             ".write": "auth != null && auth.uid == $uid",
             ".validate": "newData.hasChildren(['startedAt', 'endedAt', 'durationS', 'distanceM', 'avgPaceSPerKm', 'calories', 'routePath', 'photoCount', 'integrityFlags', 'appVersion', 'deviceModel']) && newData.child('startedAt').isNumber() && newData.child('startedAt').val() > 0 && newData.child('durationS').isNumber() && newData.child('durationS').val() > 0 && newData.child('durationS').val() <= 86400 && newData.child('distanceM').isNumber() && newData.child('distanceM').val() >= 50 && newData.child('distanceM').val() <= 100000 && newData.child('photoCount').isNumber() && newData.child('photoCount').val() >= 0 && newData.child('integrityFlags').hasChildren() && newData.child('appVersion').isString() && newData.child('deviceModel').isString() && newData.child('routePath').isString()"
+          },
+          "route": {
+            ".read": "auth != null && auth.uid == $uid",
+            ".write": "auth != null && auth.uid == $uid",
+            ".validate": "newData.hasChildren(['version', 'runId', 'uid', 'pointCount', 'points']) && newData.child('version').isNumber() && newData.child('runId').isString() && newData.child('uid').isString() && newData.child('uid').val() == $uid && newData.child('pointCount').isNumber() && newData.child('points').hasChildren()"
+          },
+          "photos": {
+            "$photoId": {
+              ".read": "auth != null && auth.uid == $uid",
+              ".write": "auth != null && auth.uid == $uid",
+              ".validate": "newData.hasChildren(['photoId', 'publicId', 'url', 'bytes', 'uploadedAt']) && newData.child('photoId').isString() && newData.child('publicId').isString() && newData.child('url').isString() && newData.child('bytes').isNumber() && newData.child('uploadedAt').isNumber()"
+            }
           }
         }
       }
@@ -33,7 +46,7 @@
     "agg": {
       "$periodKey": {
         ".read": true,
-        ".indexOn": ["distanceM", "score"],
+        ".indexOn": "score",
         "$uid": {
           ".write": "auth != null && auth.uid == $uid",
           ".validate": "newData.hasChildren(['distanceM', 'runCount', 'score', 'updatedAt', 'lastRunId']) && newData.child('distanceM').isNumber() && newData.child('distanceM').val() >= 0 && newData.child('runCount').isNumber() && newData.child('runCount').val() >= 0 && newData.child('score').isNumber() && newData.child('score').val() >= 0 && newData.child('score').val() == newData.child('distanceM').val() && newData.child('updatedAt').isNumber() && newData.child('lastRunId').isString()"

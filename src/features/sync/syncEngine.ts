@@ -1,7 +1,7 @@
 import { firebasePaths } from '../../data/firebase/paths';
-import { computeIntegrityFlags, hasFatalIntegrityFlags, MIN_POINT_COUNT } from '../../data/firebase/integrity';
+import { computeIntegrityFlags, hasFatalIntegrityFlags, MAX_ROUTE_SIZE_BYTES, MIN_POINT_COUNT } from '../../data/firebase/integrity';
 import { rtdb } from '../../data/firebase/rtdb';
-import { GZIP_CONTENT_TYPE, serializeRouteBlob, storage } from '../../data/firebase/storage';
+import { runRouteRepo } from '../../data/firebase/runRouteRepo';
 import type { RouteBlob, RunSummary } from '../../data/firebase/types';
 import { getSyncMetadata } from '../../infra/device/syncMetadata';
 import type { OutboxOp, RunPoint, RunSession } from '../../shared/types';
@@ -69,7 +69,7 @@ const buildRunSummary = async (
     distanceM: session.totals.distanceM,
     avgPaceSPerKm: session.totals.avgPaceSPerKm ?? null,
     calories: session.totals.calories ?? null,
-    routePath: firebasePaths.routePath(uid, sessionId),
+    routePath: firebasePaths.runRoute(uid, sessionId),
     photoCount: 0,
     integrityFlags,
     appVersion: metadata.appVersion,
@@ -87,8 +87,7 @@ export const createSyncEngine = ({
   const executeUploadRoute = async (op: OutboxOp, session: RunSession): Promise<void> => {
     assertSessionOwner(session, uid);
 
-    const routePath = firebasePaths.routePath(uid, op.sessionId);
-    const alreadyUploaded = await storage.exists(routePath);
+    const alreadyUploaded = await runRouteRepo.exists(uid, op.sessionId);
 
     if (!alreadyUploaded) {
       const points = await runRepo.getPoints(op.sessionId);
@@ -97,8 +96,11 @@ export const createSyncEngine = ({
       }
 
       const routeBlob = buildRouteBlob(op.sessionId, uid, points);
-      const compressed = await serializeRouteBlob(routeBlob);
-      await storage.upload(routePath, compressed, GZIP_CONTENT_TYPE);
+      const payload = JSON.stringify(routeBlob);
+      if (new Blob([payload]).size > MAX_ROUTE_SIZE_BYTES) {
+        throw new SyncError('ROUTE_TOO_LARGE', 'La ruta excede el limite permitido.');
+      }
+      await runRouteRepo.write(uid, op.sessionId, routeBlob);
     }
 
     await runRepo.updateSession(op.sessionId, {

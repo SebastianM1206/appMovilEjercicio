@@ -25,10 +25,12 @@ const AuthGate = ({ children }: AuthGateProps) => {
   }
 
   if (!isAuthenticated && !isAuthRoute) {
+    // Si no esta logueado, lo mando  pal auth.
     return <Redirect to="/auth" />;
   }
 
   if (isAuthenticated && isAuthRoute) {
+    // si entró, adentro queda .
     return <Redirect to="/run" />;
   }
 

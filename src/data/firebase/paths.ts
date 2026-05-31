@@ -3,16 +3,13 @@ export const firebasePaths = {
   runsRoot: 'runs',
   countedRoot: 'counted',
   aggRoot: 'agg',
-  routesRoot: 'routes',
-  photosRoot: 'photos',
-  avatarsRoot: 'avatars',
   userPublic: (uid: string) => `users/${uid}/public`,
   runSummary: (uid: string, runId: string) => `runs/${uid}/${runId}/summary`,
+  runRoute: (uid: string, runId: string) => `runs/${uid}/${runId}/route`,
+  runPhotos: (uid: string, runId: string) => `runs/${uid}/${runId}/photos`,
+  runPhoto: (uid: string, runId: string, photoId: string) =>
+    `runs/${uid}/${runId}/photos/${photoId}`,
   counted: (uid: string, runId: string) => `counted/${uid}/${runId}`,
   agg: (periodKey: string, uid: string) => `agg/${periodKey}/${uid}`,
   aggPeriod: (periodKey: string) => `agg/${periodKey}`,
-  routePath: (uid: string, runId: string) => `routes/${uid}/${runId}.json.gz`,
-  photoPath: (uid: string, runId: string, photoId: string) =>
-    `photos/${uid}/${runId}/${photoId}.jpg`,
-  avatarPath: (uid: string) => `avatars/${uid}.jpg`,
 };

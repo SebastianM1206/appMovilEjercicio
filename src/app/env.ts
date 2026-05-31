@@ -1,3 +1,6 @@
+const cloudinaryCloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME ?? '';
+const cloudinaryUploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET ?? '';
+
 export const env = {
   isDev: import.meta.env.DEV,
   apiBaseUrl: import.meta.env.VITE_API_BASE_URL ?? '',
@@ -10,5 +13,13 @@ export const env = {
     storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET ?? '',
     messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID ?? '',
     appId: import.meta.env.VITE_FIREBASE_APP_ID ?? '',
+  },
+  cloudinary: {
+    cloudName: cloudinaryCloudName,
+    uploadPreset: cloudinaryUploadPreset,
+    avatarFolder: import.meta.env.VITE_CLOUDINARY_AVATAR_FOLDER ?? 'avatars',
+    runPhotoFolder: import.meta.env.VITE_CLOUDINARY_RUN_PHOTO_FOLDER ?? 'run-photos',
+    /** True when both cloud name and preset are present. */
+    enabled: Boolean(cloudinaryCloudName) && Boolean(cloudinaryUploadPreset),
   },
 };

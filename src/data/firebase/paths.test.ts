@@ -11,7 +11,7 @@ describe('firebasePaths', () => {
     expect(firebasePaths.agg('2026-22', 'abc123')).toBe('agg/2026-22/abc123');
   });
 
-  it('builds route storage path with gzip extension', () => {
-    expect(firebasePaths.routePath('abc123', 'run-1')).toBe('routes/abc123/run-1.json.gz');
+  it('builds route path in RTDB', () => {
+    expect(firebasePaths.runRoute('abc123', 'run-1')).toBe('runs/abc123/run-1/route');
   });
 });

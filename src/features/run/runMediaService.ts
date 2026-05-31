@@ -1,4 +1,4 @@
-import { mediaRepo } from '../../data/firebase/mediaRepo';
+import { mediaRepo } from '../../data/cloudinary/mediaRepo';
 import { authService } from '../auth/authService';
 
 const mapRunPhotoUploadError = (error: unknown): Error => {
@@ -12,6 +12,18 @@ const mapRunPhotoUploadError = (error: unknown): Error => {
     if (error.message === 'PHOTO_TOO_LARGE') {
       return new Error('La foto excede el limite de 2 MB.');
     }
+    if (error.message === 'CLOUDINARY_DISABLED') {
+      return new Error('La subida de fotos esta deshabilitada. Configura Cloudinary.');
+    }
+    if (error.message === 'CLOUDINARY_NOT_CONFIGURED') {
+      return new Error('Cloudinary no esta configurado en este entorno.');
+    }
+    if (error.message.startsWith('CLOUDINARY_NETWORK_ERROR')) {
+      return new Error('No se pudo conectar con Cloudinary. Revisa tu conexion.');
+    }
+    if (error.message.startsWith('CLOUDINARY_UPLOAD_FAILED')) {
+      return new Error('Cloudinary rechazo la subida de la foto.');
+    }
     if (error.message === 'RUN_SUMMARY_NOT_FOUND') {
       return new Error('La corrida aun no tiene resumen sincronizado.');
     }
@@ -22,7 +34,7 @@ const mapRunPhotoUploadError = (error: unknown): Error => {
 
 export type UploadRunPhotoResult = {
   photoId: string;
-  path: string;
+  publicId: string;
   downloadUrl: string;
   photoCount: number;
 };
@@ -35,6 +47,7 @@ export const runMediaService = {
     }
 
     try {
+      // Le paso la foto y el runId; Cloudinary gestiona melo.
       return await mediaRepo.uploadRunPhoto({
         uid: user.id,
         runId,

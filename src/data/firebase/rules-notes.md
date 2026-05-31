@@ -8,6 +8,8 @@ Este archivo es solo notas. Las reglas reales viven en Firebase Console.
 
 - /users/{uid}/public
 - /runs/{uid}/{runId}/summary
+- /runs/{uid}/{runId}/route
+- /runs/{uid}/{runId}/photos/{photoId}
 - /counted/{uid}/{runId}
 - /agg/{periodKey}/{uid}
 
@@ -31,6 +33,16 @@ Este archivo es solo notas. Las reglas reales viven en Firebase Console.
             ".read": "auth != null && auth.uid === $uid",
             ".write": "auth != null && auth.uid === $uid",
             ".validate": "newData.hasChildren(['startedAt', 'durationS', 'distanceM'])"
+          },
+          "route": {
+            ".read": "auth != null && auth.uid === $uid",
+            ".write": "auth != null && auth.uid === $uid"
+          },
+          "photos": {
+            "$photoId": {
+              ".read": "auth != null && auth.uid === $uid",
+              ".write": "auth != null && auth.uid === $uid"
+            }
           }
         }
       }
@@ -67,30 +79,7 @@ Este archivo es solo notas. Las reglas reales viven en Firebase Console.
 - durationS > 0
 - avgPaceSPerKm entre 180 y 1200 (3 a 20 min/km)
 
-## Storage
+## Cloudinary
 
-### Rutas esperadas
-
-- routes/{uid}/{runId}.json.gz
-- photos/{uid}/{runId}/{photoId}.jpg
-- avatars/{uid}.jpg
-
-### Reglas base
-
-```rules
-rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    match /routes/{uid}/{file} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
-    }
-    match /photos/{uid}/{runId}/{file} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
-    }
-    match /avatars/{uid}.jpg {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == uid;
-    }
-  }
-}
-```
+Las imagenes (avatars y fotos de corridas) viven en Cloudinary.
+En RTDB solo guardamos metadata y URLs.

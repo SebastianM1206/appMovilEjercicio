@@ -48,35 +48,17 @@ const mapAggToEntry = async (userId: string, agg: AggEntry): Promise<Leaderboard
 
 export const leaderboardService = {
   async getTop(periodKey: string, limit: number): Promise<LeaderboardEntry[]> {
-    const size = Math.max(0, limit);
-    if (size === 0) {
-      return [];
-    }
-
-    const path = firebasePaths.aggPeriod(periodKey);
-    const aggMap = await rtdb.query<AggEntry>(path, 'score', size);
-
-    const entries = Object.entries(aggMap ?? {})
-      .map(([userId, agg]) => ({
-        userId,
-        distanceM: agg.distanceM ?? 0,
-        runCount: agg.runCount ?? 0,
-        score: agg.score ?? agg.distanceM ?? 0,
-      }))
-      .sort((a, b) => b.score - a.score)
-      .slice(0, size);
-
-    return Promise.all(
-      entries.map((entry) =>
-        mapAggToEntry(entry.userId, {
-          distanceM: entry.distanceM,
-          runCount: entry.runCount,
-          score: entry.score,
-          updatedAt: 0,
-          lastRunId: '',
-        }),
-      ),
+    const records = await rtdb.query<AggEntry>(
+      firebasePaths.aggPeriod(periodKey),
+      'score',
+      limit,
     );
+
+    const entries = await Promise.all(
+      Object.entries(records).map(([userId, agg]) => mapAggToEntry(userId, agg))
+    );
+
+    return entries.sort((a, b) => b.score - a.score);
   },
 
   async getMyAgg(periodKey: string, uid: string): Promise<LeaderboardEntry | null> {

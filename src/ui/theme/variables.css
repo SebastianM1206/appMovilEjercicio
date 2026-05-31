@@ -1,4 +1,113 @@
 :root {
+  /* Stride · tokens */
+  --stride-accent: #ff4d2e;
+  --stride-accent-dark: #e0380f;
+  --stride-accent-soft: #ffede8;
+  --stride-accent-tint: #fff4f1;
+  --stride-ink: #0e1116;
+  --stride-ink-2: #5b6470;
+  --stride-ink-3: #98a1ac;
+  --stride-line: #eceef1;
+  --stride-line-2: #e2e5e9;
+  --stride-bg: #ffffff;
+  --stride-bg-page: #f0eee9;
+  --stride-bg-subtle: #f5f7f8;
+  --stride-bg-sunken: #eef1f3;
+  --stride-success: #1fb87a;
+  --stride-success-soft: #e5f7ef;
+  --stride-warn: #f5a623;
+  --stride-warn-soft: #fef4e2;
+  --stride-danger: #e5484d;
+  --stride-danger-soft: #fcebec;
+  --stride-info: #2e7bff;
+  --stride-map-land: #e9ecef;
+  --stride-map-park: #dcebd8;
+  --stride-map-water: #d4e6f4;
+  --stride-map-road: #ffffff;
+  --stride-shadow: 0 1px 2px rgba(14, 17, 22, 0.04), 0 4px 16px rgba(14, 17, 22, 0.06);
+  --stride-shadow-lg: 0 8px 40px rgba(14, 17, 22, 0.14);
+
   --app-spacing: 16px;
   --app-radius: 12px;
+
+  /* Ionic overrides para no romper estilos por default */
+  --ion-font-family: 'Hanken Grotesk', system-ui, sans-serif;
+  --ion-background-color: var(--stride-bg-page);
+  --ion-text-color: var(--stride-ink);
+  --ion-color-primary: var(--stride-accent);
+  --ion-color-primary-rgb: 255, 77, 46;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: var(--stride-accent-dark);
+  --ion-color-primary-tint: #ff6a4f;
+}
+
+html,
+body {
+  background: var(--stride-bg-page);
+  color: var(--stride-ink);
+  font-family: 'Hanken Grotesk', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+ion-app,
+ion-content {
+  --background: var(--stride-bg-page);
+}
+
+/* Animaciones compartidas */
+@keyframes stride-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes stride-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.85);
+  }
+}
+@keyframes stride-slide-down {
+  from {
+    transform: translateY(-14px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@keyframes stride-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+.stride-spin {
+  animation: stride-spin 1s linear infinite;
+}
+.stride-pulse {
+  animation: stride-pulse 1.2s ease-in-out infinite;
+}
+.stride-slide-down {
+  animation: stride-slide-down 0.35s ease;
+}
+.stride-skeleton {
+  background: linear-gradient(90deg, #eef1f3 25%, #e2e7ea 37%, #eef1f3 63%);
+  background-size: 400% 100%;
+  animation: stride-shimmer 1.4s ease infinite;
+}
+.stride-num {
+  font-variant-numeric: tabular-nums;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  letter-spacing: -0.02em;
 }

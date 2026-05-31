@@ -2,13 +2,13 @@ import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
 import { env } from '../../app/env';
 
 const FIREBASE_ENV_KEYS = [
-  'apiKey',
-  'authDomain',
-  'databaseURL',
-  'projectId',
-  'storageBucket',
-  'messagingSenderId',
-  'appId',
+  { key: 'apiKey', env: 'VITE_FIREBASE_API_KEY', required: true },
+  { key: 'authDomain', env: 'VITE_FIREBASE_AUTH_DOMAIN', required: true },
+  { key: 'databaseURL', env: 'VITE_FIREBASE_DATABASE_URL', required: true },
+  { key: 'projectId', env: 'VITE_FIREBASE_PROJECT_ID', required: true },
+  { key: 'storageBucket', env: 'VITE_FIREBASE_STORAGE_BUCKET', required: false },
+  { key: 'messagingSenderId', env: 'VITE_FIREBASE_MESSAGING_SENDER_ID', required: true },
+  { key: 'appId', env: 'VITE_FIREBASE_APP_ID', required: true },
 ] as const;
 
 const assertFirebaseConfig = (): void => {
@@ -16,13 +16,15 @@ const assertFirebaseConfig = (): void => {
     return;
   }
 
-  const missing = FIREBASE_ENV_KEYS.filter((key) => !env.firebase[key]?.trim());
+  const missing = FIREBASE_ENV_KEYS.filter(
+    (item) => item.required && !env.firebase[item.key]?.trim(),
+  );
   if (missing.length === 0) {
     return;
   }
 
   throw new Error(
-    `Firebase config incompleta. Variables faltantes: ${missing.map((key) => `VITE_FIREBASE_${key.toUpperCase()}`).join(', ')}`,
+    `Firebase config incompleta. Variables faltantes: ${missing.map((item) => item.env).join(', ')}`,
   );
 };
 
