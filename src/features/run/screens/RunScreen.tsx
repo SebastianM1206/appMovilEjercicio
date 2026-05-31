@@ -60,12 +60,6 @@ const RunScreen = () => {
       .join('');
   }, [user]);
 
-  const liveProgress = useMemo(() => {
-    // Esto es pa animar a que le meta más duro.
-    if (run.status === 'idle' || run.status === 'finished') return 0;
-    const km = run.distanceMeters / 1000;
-    return Math.min(0.92, 0.1 + km * 0.18);
-  }, [run.distanceMeters, run.status]);
 
   // ───────── Live view (recording / paused) ─────────
   if (run.status === 'recording' || run.status === 'paused') {
@@ -74,7 +68,8 @@ const RunScreen = () => {
       <AppLayout hideTabBar>
         <div className="relative">
           <MapRoute
-            progress={liveProgress}
+            samples={run.samples}
+            live
             height={300}
             pinColor={run.gpsReady ? 'var(--stride-success)' : 'var(--stride-warn)'}
             pinLabel={run.gpsReady ? 'GPS fuerte' : 'Buscando GPS…'}
@@ -279,7 +274,7 @@ const RunScreen = () => {
         </div>
 
         <div className="mx-4 mt-4 rounded-[22px] overflow-hidden shadow-stride border border-stride-line">
-          <MapRoute progress={1} height={200} showPin={false} />
+          <MapRoute samples={run.samples} height={200} showPin={false} />
         </div>
 
         <div

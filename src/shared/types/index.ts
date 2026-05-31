@@ -17,6 +17,9 @@ export type RunStats = {
   avgSpeedMps?: number;
   pointCount?: number;
   badPointCount?: number;
+  batteryLevel?: number;
+  deviceModel?: string;
+  devicePlatform?: string;
 };
 
 export type RunSyncFlags = {

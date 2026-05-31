@@ -4,6 +4,7 @@ import { env } from '../../../app/env';
 import { useHistory } from '../hooks/useHistory';
 import { useRunMedia } from '../../run/hooks/useRunMedia';
 import { useSyncQueue } from '../../sync/syncContext';
+import { useCamera } from '../../../infra/device/camera';
 import Chip from '../../../ui/components/Chip';
 import EmptyState from '../../../ui/components/EmptyState';
 import Icon from '../../../ui/components/Icon';
@@ -70,6 +71,7 @@ const HistoryScreen = () => {
   const { items, isLoading, error, refresh } = useHistory();
   const { pendingCount, isSyncing, lastError, triggerSync } = useSyncQueue();
   const { isUploadingPhoto, lastUpload, error: photoError, uploadRunPhoto } = useRunMedia();
+  const { getPhoto } = useCamera();
   const [range, setRange] = useState<RangeKey>('all');
   const [photoTarget, setPhotoTarget] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -98,13 +100,20 @@ const HistoryScreen = () => {
     };
   }, [items]);
 
-  const handlePickPhoto = (runId: string) => {
-    // Si Cloudinary esta apagado, ni intentamos subir fotos. Luego le falseamos al cliente 
+  const handlePickPhoto = async (runId: string) => {
+    // Si Cloudinary esta apagado, ni intentamos subir fotos. Luego le falseamos al cliente
     if (!cloudinaryEnabled) {
       return;
     }
     if (!UUID_V4.test(runId)) return;
     setPhotoTarget(runId);
+    const dataUrl = await getPhoto();
+    if (dataUrl) {
+      const blob = await fetch(dataUrl).then((res) => res.blob());
+      await uploadRunPhoto(runId, blob);
+      await refresh();
+      return;
+    }
     fileInputRef.current?.click();
   };
 
@@ -285,7 +294,7 @@ const HistoryScreen = () => {
                   {cloudinaryEnabled ? (
                     <button
                       type="button"
-                      onClick={() => handlePickPhoto(run.id)}
+                      onClick={() => void handlePickPhoto(run.id)}
                       disabled={isUploadingPhoto}
                       className="inline-flex items-center gap-1.5 font-body font-bold"
                       style={{ fontSize: 12.5, color: 'var(--stride-accent)' }}

@@ -1,32 +1,33 @@
-import type { FC } from 'react';
+import { useEffect, type FC } from 'react';
+import { MapContainer, TileLayer, Polyline, CircleMarker, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import type { RunSample } from '../../features/run/domain/runRecorder';
 
-const ROUTE =
-  'M58 232 C70 180 110 176 132 150 C150 128 138 96 168 84 C206 68 250 96 268 70 C286 46 264 22 300 28';
-const TOTAL_LEN = 470;
+const DEFAULT_CENTER: [number, number] = [4.711, -74.072]; // Bogotá fallback
+const ROUTE_COLOR = '#FF4D2E';
 
-const PTS: [number, number][] = [
-  [58, 232],
-  [110, 178],
-  [132, 150],
-  [160, 100],
-  [210, 80],
-  [258, 76],
-  [280, 40],
-  [300, 28],
-];
-
-const positionAt = (p: number) => {
-  const clamped = Math.max(0, Math.min(1, p));
-  const i = Math.min(PTS.length - 2, Math.floor(clamped * (PTS.length - 1)));
-  const t = clamped * (PTS.length - 1) - i;
-  return {
-    x: PTS[i][0] + (PTS[i + 1][0] - PTS[i][0]) * t,
-    y: PTS[i][1] + (PTS[i + 1][1] - PTS[i][1]) * t,
-  };
+const MapFitter: FC<{ samples: RunSample[]; live?: boolean }> = ({ samples, live }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (samples.length === 0) return;
+    const last = samples[samples.length - 1];
+    if (live) {
+      map.panTo([last.lat, last.lon]);
+    } else if (samples.length === 1) {
+      map.setView([last.lat, last.lon], 16);
+    } else {
+      map.fitBounds(
+        L.latLngBounds(samples.map((s) => [s.lat, s.lon] as [number, number])),
+        { padding: [30, 30], maxZoom: 17 },
+      );
+    }
+  }, [samples, live, map]);
+  return null;
 };
 
 type MapRouteProps = {
-  progress?: number;
+  samples?: RunSample[];
+  live?: boolean;
   height?: number;
   showPin?: boolean;
   pinLabel?: string;
@@ -37,7 +38,8 @@ type MapRouteProps = {
 };
 
 export const MapRoute: FC<MapRouteProps> = ({
-  progress = 1,
+  samples = [],
+  live,
   height = 280,
   showPin = true,
   pinLabel = 'GPS fuerte',
@@ -46,73 +48,42 @@ export const MapRoute: FC<MapRouteProps> = ({
   compact,
   className,
 }) => {
-  const pos = positionAt(progress);
+  const positions: [number, number][] = samples.map((s) => [s.lat, s.lon]);
+  const lastPos = positions[positions.length - 1];
+
   return (
     <div
       className={['relative w-full overflow-hidden', className].filter(Boolean).join(' ')}
-      style={{ height, background: 'var(--stride-map-land)' }}
+      style={{ height }}
     >
-      <svg
-        viewBox="0 0 360 280"
-        preserveAspectRatio="xMidYMid slice"
-        className="w-full h-full block"
-        style={{ opacity: faded ? 0.55 : 1 }}
+      <MapContainer
+        center={lastPos ?? DEFAULT_CENTER}
+        zoom={16}
+        style={{ width: '100%', height: '100%', opacity: faded ? 0.55 : 1 }}
+        zoomControl={false}
+        attributionControl={false}
+        scrollWheelZoom={false}
       >
-        <rect width="360" height="280" fill="var(--stride-map-land)" />
-        <path
-          d="M0 0 H140 C120 40 150 70 110 96 C70 120 90 150 40 160 L0 150 Z"
-          fill="var(--stride-map-water)"
-        />
-        <rect
-          x="250"
-          y="200"
-          width="160"
-          height="120"
-          rx="8"
-          fill="var(--stride-map-water)"
-          transform="rotate(8 300 240)"
-        />
-        <rect x="178" y="150" width="120" height="86" rx="10" fill="var(--stride-map-park)" />
-        <circle cx="70" cy="60" r="34" fill="var(--stride-map-park)" />
-        <g stroke="var(--stride-map-road)" strokeWidth="9" fill="none" strokeLinecap="round">
-          <path d="M-10 210 H370" />
-          <path d="M-10 120 H370" />
-          <path d="M120 -10 V290" />
-          <path d="M250 -10 V290" />
-          <path d="M40 290 L200 60 L360 -10" opacity="0.85" />
-        </g>
-        <g stroke="#F4F6F7" strokeWidth="4" fill="none" strokeLinecap="round">
-          <path d="M-10 165 H370" />
-          <path d="M70 -10 V290" />
-          <path d="M310 -10 V290" />
-        </g>
-        <path d={ROUTE} fill="none" stroke="rgba(224,56,15,0.18)" strokeWidth="11" strokeLinecap="round" />
-        <path
-          d={ROUTE}
-          fill="none"
-          stroke="var(--stride-accent)"
-          strokeWidth="5.5"
-          strokeLinecap="round"
-          strokeDasharray={TOTAL_LEN}
-          strokeDashoffset={TOTAL_LEN * (1 - Math.max(0, Math.min(1, progress)))}
-        />
-        <circle cx="58" cy="232" r="6.5" fill="#fff" stroke="var(--stride-ink)" strokeWidth="3.5" />
-        {progress < 1 && !compact && (
-          <g>
-            <circle cx={pos.x} cy={pos.y} r="13" fill="rgba(255,77,46,0.18)">
-              <animate attributeName="r" values="9;15;9" dur="1.8s" repeatCount="indefinite" />
-            </circle>
-            <circle cx={pos.x} cy={pos.y} r="6.5" fill="var(--stride-accent)" stroke="#fff" strokeWidth="3" />
-          </g>
+        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+        {positions.length > 1 && (
+          <Polyline
+            positions={positions}
+            pathOptions={{ color: ROUTE_COLOR, weight: 5, lineCap: 'round', lineJoin: 'round' }}
+          />
         )}
-        {progress >= 1 && (
-          <circle cx="300" cy="28" r="6.5" fill="var(--stride-accent)" stroke="#fff" strokeWidth="3.5" />
+        {lastPos && (
+          <CircleMarker
+            center={lastPos}
+            radius={8}
+            pathOptions={{ color: '#fff', fillColor: ROUTE_COLOR, fillOpacity: 1, weight: 3 }}
+          />
         )}
-      </svg>
+        <MapFitter samples={samples} live={live} />
+      </MapContainer>
       {showPin && !compact && (
         <div
           className="absolute top-3 right-3 flex items-center gap-1.5 rounded-[10px] bg-white px-2.5 py-1.5 shadow-stride font-body font-semibold"
-          style={{ fontSize: 12, color: 'var(--stride-ink)' }}
+          style={{ fontSize: 12, color: 'var(--stride-ink)', zIndex: 1000 }}
         >
           <span className="w-[7px] h-[7px] rounded-full" style={{ background: pinColor }} />
           {pinLabel}

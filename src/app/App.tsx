@@ -17,6 +17,7 @@ import '@ionic/react/css/palettes/dark.system.css';
 
 import '../ui/theme/tailwind.css';
 import '../ui/theme/variables.css';
+import 'leaflet/dist/leaflet.css';
 
 setupIonicReact();
 

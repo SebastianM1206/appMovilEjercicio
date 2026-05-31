@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Geolocation, type Position } from '@capacitor/geolocation';
+import type { Position } from '@capacitor/geolocation';
 import { createRunRepoDexie } from '../../../data/dexie/repos/runRepoDexie';
 import { authService } from '../../auth/authService';
 import { computeRunMetrics } from '../domain/metricsEngine';
@@ -7,6 +7,18 @@ import { checkMilestones } from '../domain/progressEngine';
 import { createRunRecorder, type RunSample } from '../domain/runRecorder';
 import { getErrorMessage } from '../../../shared/utils';
 import type { RunPoint } from '../../../shared/types';
+import { useGeolocation } from '../../../infra/device/geolocation';
+import { useDeviceMotion, useMovementDetection } from '../../../infra/device/motion';
+import { useHaptics } from '../../../infra/device/haptics';
+import { useDevice } from '../../../infra/device/deviceInfo';
+import { scheduleNotification } from '../../../infra/device/notifications';
+
+const formatPaceNotif = (secPerKm: number): string | null => {
+  if (!Number.isFinite(secPerKm) || secPerKm <= 0) return null;
+  const m = Math.floor(secPerKm / 60);
+  const s = Math.round(secPerKm % 60);
+  return `${m}'${String(s).padStart(2, '0')}"`;
+};
 
 export type RunStatus = 'idle' | 'recording' | 'paused' | 'finished';
 
@@ -25,7 +37,7 @@ export type RunSessionState = {
 
 export type UseRunSession = RunSessionState & {
   start: () => Promise<void>;
-  pause: () => void;
+  pause: (reason?: 'manual' | 'auto') => void;
   resume: () => void;
   stop: () => Promise<void>;
   reset: () => void;
@@ -43,13 +55,27 @@ const DEFAULT_STATE: RunSessionState = {
   gpsReady: false,
 };
 
+const MOVEMENT_THRESHOLD = 1.1;
+const AUTO_PAUSE_IDLE_MS = 15_000;
+
 export const useRunSession = (): UseRunSession => {
   const repo = useMemo(() => createRunRepoDexie(), []);
   const recorder = useMemo(() => createRunRecorder(), []);
   const [state, setState] = useState<RunSessionState>(DEFAULT_STATE);
 
-  const watchIdRef = useRef<string | null>(null);
+  const { currentPosition, error: geoError, startWatching, stopWatching } = useGeolocation({
+    minimumUpdateIntervalMs: 3_000,
+  });
+  const { acceleration, error: motionError } = useDeviceMotion({
+    enabled: state.status === 'recording' || state.status === 'paused',
+  });
+  const { isMoving, lastMovementAt } = useMovementDetection(acceleration, MOVEMENT_THRESHOLD);
+  const { impact, notify } = useHaptics();
+  const { deviceInfo, batteryInfo, reload, reloadBattery } = useDevice();
+
+  const autoPauseRef = useRef(false);
   const tickRef = useRef<number | null>(null);
+  const lowBatteryNotifiedRef = useRef(false);
   const startedAtRef = useRef<number>(0);
   const pausedAccumRef = useRef<number>(0);
   const pausedAtRef = useRef<number | null>(null);
@@ -85,6 +111,23 @@ export const useRunSession = (): UseRunSession => {
     if (milestone.event) {
       lastMilestoneRef.current = milestone.nextMilestoneKm;
       setState((prev) => ({ ...prev, milestoneKm: milestone.event!.payload.km }));
+      if (sessionIdRef.current) {
+        void repo.addEvent({
+          sessionId: sessionIdRef.current,
+          ts: milestone.event.payload.timestamp,
+          type: 'MILESTONE',
+          payload: { km: milestone.event.payload.km },
+        });
+      }
+      void notify('SUCCESS');
+      const paceLabel = formatPaceNotif(pacePerKmSec);
+      void scheduleNotification(
+        {
+          title: `¡Km ${milestone.event.payload.km} completado!`,
+          body: paceLabel ? `Ritmo: ${paceLabel} /km · seguí así` : '¡Seguís avanzando!',
+        },
+        1,
+      );
       window.setTimeout(() => {
         setState((prev) => (prev.milestoneKm === milestone.event!.payload.km ? { ...prev, milestoneKm: null } : prev));
       }, 3200);
@@ -98,7 +141,7 @@ export const useRunSession = (): UseRunSession => {
       pacePerKmSec,
       samples,
     }));
-  }, [recorder]);
+  }, [notify, recorder, repo]);
 
   const handlePosition = useCallback(
     (position: Position | null) => {
@@ -135,44 +178,82 @@ export const useRunSession = (): UseRunSession => {
     [flushPoints, recomputeMetrics, recorder],
   );
 
-  const startWatch = useCallback(async () => {
-    if (watchIdRef.current) {
+  useEffect(() => {
+    if (currentPosition) {
+      handlePosition(currentPosition);
+    }
+  }, [currentPosition, handlePosition]);
+
+  useEffect(() => {
+    if (!geoError) {
       return;
     }
-    try {
-      const id = await Geolocation.watchPosition(
-        { enableHighAccuracy: true, timeout: 15_000, maximumAge: 3_000 },
-        (position, error) => {
-          if (error) {
-            setState((prev) => ({
-              ...prev,
-              error: getErrorMessage(error, 'Error de GPS'),
-              gpsReady: false,
-            }));
-            return;
-          }
-          handlePosition(position);
-        },
-      );
-      watchIdRef.current = id;
-    } catch (error) {
-      setState((prev) => ({
-        ...prev,
-        error: getErrorMessage(error, 'No se pudo iniciar el GPS. Revisa los permisos.'),
-        gpsReady: false,
-      }));
-    }
-  }, [handlePosition]);
+    setState((prev) => ({
+      ...prev,
+      error: geoError,
+      gpsReady: false,
+    }));
+  }, [geoError]);
 
-  const clearWatch = useCallback(async () => {
-    if (!watchIdRef.current) return;
-    try {
-      await Geolocation.clearWatch({ id: watchIdRef.current });
-    } catch {
-      // ignore
+  useEffect(() => {
+    if (!motionError || state.status !== 'recording') {
+      return;
     }
-    watchIdRef.current = null;
-  }, []);
+    setState((prev) => ({
+      ...prev,
+      error: motionError,
+    }));
+  }, [motionError, state.status]);
+
+  useEffect(() => {
+    if (!sessionIdRef.current || state.status === 'idle') {
+      return;
+    }
+    if (!deviceInfo && !batteryInfo) {
+      return;
+    }
+
+    void (async () => {
+      const session = await repo.getSession(sessionIdRef.current!);
+      if (!session) {
+        return;
+      }
+      await repo.updateSession(sessionIdRef.current!, {
+        stats: {
+          ...session.stats,
+          deviceModel: deviceInfo?.model,
+          devicePlatform: deviceInfo?.platform,
+          batteryLevel: batteryInfo?.batteryLevel,
+        },
+      });
+    })();
+  }, [batteryInfo, deviceInfo, repo, state.status]);
+
+  // Refresca la batería cada 60 s mientras graba para que la advertencia sea oportuna
+  useEffect(() => {
+    if (state.status !== 'recording') return;
+    const id = window.setInterval(() => void reloadBattery(), 60_000);
+    return () => window.clearInterval(id);
+  }, [state.status, reloadBattery]);
+
+  // Advertencia de batería baja (una sola vez por corrida)
+  useEffect(() => {
+    const level = batteryInfo?.batteryLevel;
+    if (
+      typeof level !== 'number' ||
+      level > 0.2 ||
+      !sessionIdRef.current ||
+      lowBatteryNotifiedRef.current
+    ) return;
+    lowBatteryNotifiedRef.current = true;
+    void scheduleNotification(
+      {
+        title: 'Stride — Batería baja',
+        body: `Batería al ${Math.round(level * 100)}%. Guardá tu corrida antes de que se apague.`,
+      },
+      1,
+    );
+  }, [batteryInfo]);
 
   const stopTicker = useCallback(() => {
     if (tickRef.current !== null) {
@@ -194,12 +275,15 @@ export const useRunSession = (): UseRunSession => {
       setState((prev) => ({ ...prev, error: 'Necesitas iniciar sesion para correr.' }));
       return;
     }
+    void reload();
+    void reloadBattery();
     recorder.reset();
     pendingPointsRef.current = [];
     lastMilestoneRef.current = 0;
     pausedAccumRef.current = 0;
     pausedAtRef.current = null;
     startedAtRef.current = Date.now();
+    autoPauseRef.current = false;
 
     try {
       const session = await repo.createSession(user.id, startedAtRef.current);
@@ -209,19 +293,30 @@ export const useRunSession = (): UseRunSession => {
         status: 'recording',
         sessionId: session.id,
       });
-      await startWatch();
+      await startWatching();
+      void impact('HEAVY');
       startTicker();
     } catch (error) {
       setState((prev) => ({ ...prev, error: getErrorMessage(error, 'No se pudo iniciar la corrida.') }));
     }
-  }, [recorder, repo, startTicker, startWatch]);
+  }, [impact, recorder, reload, reloadBattery, repo, startTicker, startWatching]);
 
-  const pause = useCallback(() => {
+  const pause = useCallback((reason: 'manual' | 'auto' = 'manual') => {
     if (state.status !== 'recording') return;
     pausedAtRef.current = Date.now();
     stopTicker();
+    void stopWatching();
+    if (sessionIdRef.current) {
+      void repo.addEvent({
+        sessionId: sessionIdRef.current,
+        ts: Date.now(),
+        type: 'PAUSE',
+        payload: { reason },
+      });
+    }
+    void impact('MEDIUM');
     setState((prev) => ({ ...prev, status: 'paused' }));
-  }, [state.status, stopTicker]);
+  }, [impact, repo, state.status, stopTicker, stopWatching]);
 
   const resume = useCallback(() => {
     if (state.status !== 'paused') return;
@@ -229,13 +324,52 @@ export const useRunSession = (): UseRunSession => {
       pausedAccumRef.current += Date.now() - pausedAtRef.current;
       pausedAtRef.current = null;
     }
+    autoPauseRef.current = false;
+    if (sessionIdRef.current) {
+      void repo.addEvent({
+        sessionId: sessionIdRef.current,
+        ts: Date.now(),
+        type: 'RESUME',
+      });
+    }
+    void impact('MEDIUM');
     startTicker();
+    void startWatching();
     setState((prev) => ({ ...prev, status: 'recording' }));
-  }, [startTicker, state.status]);
+  }, [impact, repo, startTicker, startWatching, state.status]);
+
+  useEffect(() => {
+    if (state.status !== 'recording') {
+      return;
+    }
+    if (!acceleration) {
+      return;
+    }
+    if (isMoving) {
+      autoPauseRef.current = false;
+      return;
+    }
+    if (Date.now() - lastMovementAt < AUTO_PAUSE_IDLE_MS) {
+      return;
+    }
+    if (autoPauseRef.current) {
+      return;
+    }
+
+    autoPauseRef.current = true;
+    void scheduleNotification(
+      {
+        title: 'Stride',
+        body: 'Pausamos la corrida por falta de movimiento.',
+      },
+      1,
+    );
+    pause('auto');
+  }, [acceleration, isMoving, lastMovementAt, pause, state.status]);
 
   const stop = useCallback(async () => {
     stopTicker();
-    await clearWatch();
+    await stopWatching();
     await flushPoints();
     if (sessionIdRef.current) {
       try {
@@ -272,12 +406,31 @@ export const useRunSession = (): UseRunSession => {
           sessionId: sessionIdRef.current,
           type: 'UPDATE_AGG',
         });
+        void notify('SUCCESS');
+        const km = (finalMetrics.distanceMeters / 1000).toFixed(2);
+        const totalMin = Math.floor(finalMetrics.durationSec / 60);
+        const totalSec = Math.round(finalMetrics.durationSec % 60);
+        const durationLabel = `${totalMin}:${String(totalSec).padStart(2, '0')}`;
+        const paceLabel = formatPaceNotif(
+          finalMetrics.distanceMeters > 0
+            ? finalMetrics.durationSec / (finalMetrics.distanceMeters / 1000)
+            : 0,
+        );
+        void scheduleNotification(
+          {
+            title: '¡Corrida finalizada!',
+            body: paceLabel
+              ? `${km} km en ${durationLabel} · ritmo ${paceLabel} /km`
+              : `${km} km completados`,
+          },
+          1,
+        );
       } catch (error) {
         console.error('finish run failed', error);
       }
     }
     setState((prev) => ({ ...prev, status: 'finished' }));
-  }, [clearWatch, flushPoints, recorder, repo, stopTicker]);
+  }, [flushPoints, notify, recorder, repo, stopTicker, stopWatching]);
 
   const reset = useCallback(() => {
     sessionIdRef.current = null;
@@ -286,6 +439,8 @@ export const useRunSession = (): UseRunSession => {
     pausedAccumRef.current = 0;
     pausedAtRef.current = null;
     startedAtRef.current = 0;
+    autoPauseRef.current = false;
+    lowBatteryNotifiedRef.current = false;
     recorder.reset();
     setState(DEFAULT_STATE);
   }, [recorder]);
@@ -293,9 +448,9 @@ export const useRunSession = (): UseRunSession => {
   useEffect(() => {
     return () => {
       stopTicker();
-      void clearWatch();
+      void stopWatching();
     };
-  }, [clearWatch, stopTicker]);
+  }, [stopTicker, stopWatching]);
 
   return {
     ...state,
